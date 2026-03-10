@@ -1,4 +1,4 @@
-# Portfolio - iaFlaskProject
+# Portfolio - FlaskProject
 
 Este es un proyecto de portafolio personal desarrollado utilizando **Python** y el framework web **Flask**.
 
