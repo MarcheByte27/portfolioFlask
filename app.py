@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, flash, redirect, url_for
-import requests
+import resend
 import os
 from dotenv import load_dotenv
 
@@ -8,7 +8,8 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 
-WEB3FORMS_KEY = os.environ.get('WEB3FORMS_KEY')
+resend.api_key = os.environ.get('RESEND_API_KEY')
+TO_EMAIL = os.environ.get('TO_EMAIL')
 
 @app.route('/')
 def home():
@@ -29,22 +30,23 @@ def contact():
         email = request.form.get('email')
         message = request.form.get('message')
 
-        payload = {
-            'access_key': WEB3FORMS_KEY,
-            'name': name,
-            'email': email,
-            'message': message,
-            'subject': f'Nuevo mensaje de {name} (Portafolio Flask)',
-        }
-
         try:
-            response = requests.post('https://api.web3forms.com/submit', json=payload, timeout=10)
-            if response.status_code == 200 and response.json().get('success'):
-                flash('¡Mensaje enviado con éxito! Te responderé lo antes posible.', 'success')
-            else:
-                flash('Hubo un error al enviar el mensaje. Inténtalo de nuevo.', 'danger')
+            resend.Emails.send({
+                "from": "Portafolio <onboarding@resend.dev>",
+                "to": [TO_EMAIL],
+                "reply_to": email,
+                "subject": f"Nuevo mensaje de {name} (Portafolio Flask)",
+                "html": f"""
+                    <h2>Nuevo mensaje de contacto</h2>
+                    <p><strong>Nombre:</strong> {name}</p>
+                    <p><strong>Email:</strong> {email}</p>
+                    <p><strong>Mensaje:</strong></p>
+                    <p>{message}</p>
+                """,
+            })
+            flash('¡Mensaje enviado con éxito! Te responderé lo antes posible.', 'success')
         except Exception as e:
-            flash(f'Error de conexión al enviar el mensaje: {str(e)}', 'danger')
+            flash(f'Error al enviar el mensaje: {str(e)}', 'danger')
 
         return redirect(url_for('contact'))
 
