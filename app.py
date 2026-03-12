@@ -1,22 +1,14 @@
 from flask import Flask, render_template, request, flash, redirect, url_for
-from flask_mail import Mail, Message
+import requests
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
-
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USE_SSL'] = False
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
 
-mail = Mail(app)
+WEB3FORMS_KEY = os.environ.get('WEB3FORMS_KEY')
 
 @app.route('/')
 def home():
@@ -37,16 +29,23 @@ def contact():
         email = request.form.get('email')
         message = request.form.get('message')
 
-        msg = Message(subject=f"Nuevo mensaje de {name} (Portafolio Flask)",
-                      recipients=[app.config['MAIL_USERNAME']])
-        msg.body = f"Nombre: {name}\nCorreo: {email}\n\nMensaje:\n{message}"
-        
+        payload = {
+            'access_key': WEB3FORMS_KEY,
+            'name': name,
+            'email': email,
+            'message': message,
+            'subject': f'Nuevo mensaje de {name} (Portafolio Flask)',
+        }
+
         try:
-            mail.send(msg)
-            flash("¡Mensaje enviado con éxito! Te responderé lo antes posible.", "success")
+            response = requests.post('https://api.web3forms.com/submit', json=payload, timeout=10)
+            if response.status_code == 200 and response.json().get('success'):
+                flash('¡Mensaje enviado con éxito! Te responderé lo antes posible.', 'success')
+            else:
+                flash('Hubo un error al enviar el mensaje. Inténtalo de nuevo.', 'danger')
         except Exception as e:
-            flash(f"Hubo un error al enviar el mensaje. Verifica tu configuración. Detalle: {str(e)}", "danger")
-            
+            flash(f'Error de conexión al enviar el mensaje: {str(e)}', 'danger')
+
         return redirect(url_for('contact'))
 
     return render_template('contact.html')
